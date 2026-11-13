@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>MEET·DOCTOR — 时延取证台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@300;400;600;700&family=DM+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@1,6..72,300..500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0A;
+    --panel:#101211;
+    --panel-2:#151816;
+    --ink:#EDE6D6;
+    --ink-dim:#A8A493;
+    --muted:#6F6E63;
+    --line:rgba(237,230,214,.13);
+    --line-strong:rgba(237,230,214,.26);
+    --amber:#E9A14C;
+    --amber-deep:#B9762A;
+    --signal:#74D3BE;
+    --alert:#D9563B;
+    --mono:'DM Mono',ui-monospace,'Cascadia Mono',Consolas,'Microsoft YaHei',monospace;
+    --disp:'Antonio','Archivo Narrow','Haettenschweiler',Impact,'Noto Sans SC','Source Han Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+    --serif:'Newsreader','Noto Serif SC','Source Han Serif SC','Songti SC','SimSun',Georgia,serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-weight:300;
+    font-size:13px;
+    letter-spacing:.01em;
+    overflow:hidden;
+  }
+
+  /* atmosphere */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(1200px 600px at 12% -10%, rgba(233,161,76,.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 110%, rgba(116,211,190,.07), transparent 60%);
+  }
+  body::after{
+    content:"";
+    position:fixed; inset:0; z-index:9; pointer-events:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.35'/></svg>");
+    opacity:.035;
+    mix-blend-mode:screen;
+  }
+  .scan{
+    position:fixed; inset:0; z-index:8; pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px);
+    animation:drift 9s linear infinite;
+  }
+  @keyframes drift{ from{transform:translateY(0)} to{transform:translateY(4px)} }
+
+  /* ---------- shell ---------- */
+  .shell{
+    position:relative; z-index:2;
+    height:100vh;
+    display:grid;
+    grid-template-rows:52px 1fr 34px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:18px;
+    padding:0 18px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(21,24,22,.9), rgba(10,11,10,.6));
+    backdrop-filter:blur(6px);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px}
+  .brand .mark{
+    font-family:var(--disp); font-weight:700; font-size:22px;
+    letter-spacing:.06em; color:var(--amber);
+    position:relative;
+  }
+  .brand .mark::after{
+    content:""; position:absolute; right:-7px; top:2px; bottom:2px; width:2px;
+    background:var(--signal); opacity:.55;
+  }
+  .brand .sub{
+    font-family:var(--disp); font-weight:400; font-size:11px;
+    letter-spacing:.34em; text-transform:uppercase; color:var(--ink-dim);
+  }
+  .chips{display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
+  .chip{
+    border:1px solid var(--line);
+    padding:4px 8px;
+    font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); white-space:nowrap;
+  }
+  .chip b{color:var(--ink-dim); font-weight:400}
+  .chip.live{border-color:rgba(116,211,190,.4); color:var(--signal)}
+  .chip.live::before{
+    content:""; display:inline-block; width:5px; height:5px; margin-right:6px;
+    background:var(--signal); border-radius:50%;
+    animation:pulse 2.2s ease-in-out infinite; vertical-align:1px;
+  }
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .clock{font-size:11px; color:var(--ink-dim); letter-spacing:.12em; font-variant-numeric:tabular-nums}
+
+  /* ---------- main ---------- */
+  .console{
+    display:grid;
+    grid-template-columns:246px minmax(0,1fr) 372px;
+    min-height:0;
+  }
+
+  /* ---------- rail ---------- */
+  .rail{
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column;
+    min-height:0;
+    background:linear-gradient(180deg, rgba(16,18,17,.85), rgba(10,11,10,.9));
+  }
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--muted);
+  }
+  .panel-head .idx{color:var(--amber); letter-spacing:.1em}
+  .cases{list-style:none; margin:0; padding:6px; overflow-y:auto; flex:1; min-height:0}
+  .case{
+    position:relative;
+    display:grid; grid-template-columns:auto 1fr; gap:10px;
+    padding:10px 10px 11px 12px;
+    margin-bottom:3px;
+    cursor:pointer;
+    border:1px solid transparent;
+    border-left:2px solid transparent;
+    transition:background .25s ease, border-color .25s ease, transform .25s ease;
+  }
+  .case:hover{background:rgba(237,230,214,.035)}
+  .case[aria-selected="true"]{
+    background:linear-gradient(90deg, rgba(233,161,76,.11), rgba(233,161,76,.02));
+    border-left-color:var(--amber);
+    border-color:var(--line);
+  }
+  .case .dot{
+    width:6px; height:6px; margin-top:5px; border-radius:50%;
+    background:var(--muted);
+  }
+  .case[data-tone="ok"] .dot{background:var(--signal); box-shadow:0 0 8px rgba(116,211,190,.5)}
+  .case[data-tone="warn"] .dot{background:var(--amber); box-shadow:0 0 8px rgba(233,161,76,.45)}
+  .case .cid{font-size:9.5px; letter-spacing:.18em; color:var(--muted)}
+  .case .ctitle{
+    font-family:var(--disp); font-weight:600; font-size:15px; line-height:1.28;
+    letter-spacing:.01em; color:var(--ink); margin-top:2px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .case .cmeta{font-size:10px; color:var(--muted); margin-top:3px; letter-spacing:.04em}
+  .rail-foot{
+    border-top:1px solid var(--line);
+    padding:10px 14px; font-size:9.5px; color:var(--muted);
+    letter-spacing:.1em; line-height:1.7;
+  }
+  .rail-foot b{color:var(--ink-dim); font-weight:400}
+
+  /* ---------- stage ---------- */
+  .stage{
+    display:flex; flex-direction:column;
+    min-height:0; min-width:0;
+    overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;
+  }
+  .stage::-webkit-scrollbar{width:8px}
+  .stage::-webkit-scrollbar-thumb{background:var(--line-strong)}
+
+  .incident{
+    padding:20px 26px 16px;
+    border-bottom:1px solid var(--line);
+    display:grid; grid-template-columns:1fr auto; gap:24px;
+    align-items:start;
+  }
+  .incident h1{
+    font-family:var(--disp); font-weight:600; font-size:31px; line-height:1.12;
+    margin:0 0 9px; letter-spacing:.005em; color:var(--ink);
+    max-width:24ch;
+  }
+  .incident .brief{
+    font-family:var(--serif); font-style:italic; font-size:15.5px; line-height:1.55;
+    color:var(--ink-dim); margin:0; max-width:54ch;
+  }
+  .incident .brief mark{
+    background:none; color:var(--amber); font-style:normal;
+    border-bottom:1px dashed rgba(233,161,76,.5); padding-bottom:1px;
+  }
+  .meta{
+    display:grid; grid-template-columns:auto auto; gap:2px 14px;
+    font-size:10.5px; letter-spacing:.06em; white-space:nowrap;
+  }
+  .meta dt{color:var(--muted)}
+  .meta dd{margin:0; color:var(--ink-dim); font-variant-numeric:tabular-nums}
+
+  /* waveform */
+  .wave{
+    position:relative;
+    padding:14px 26px 6px;
+    border-bottom:1px solid var(--line);
+    background:
+      linear-gradient(180deg, rgba(233,161,76,.035), transparent 70%),
+      repeating-linear-gradient(90deg, rgba(237,230,214,.05) 0 1px, transparent 1px 72px);
+  }
+  .wave-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
+    margin-bottom:4px;
+  }
+  .wave-head .legend{display:flex; gap:14px; letter-spacing:.1em}
+  .lg{display:flex; align-items:center; gap:5px}
+  .lg i{width:14px; height:1.5px; display:inline-block}
+  svg.waveform{display:block; width:100%; height:132px; cursor:crosshair}
+
+  /* controls */
+  .controls{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:12px 26px; border-bottom:1px solid var(--line);
+  }
+  .btn{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink); background:transparent;
+    border:1px solid var(--line-strong);
+    padding:7px 13px; cursor:pointer;
+    transition:all .2s ease;
+  }
+  .btn:hover{border-color:var(--amber); color:var(--amber)}
+  .btn:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
+  .btn.primary{border-color:rgba(233,161,76,.55); color:var(--amber)}
+  .btn.primary:hover{background:rgba(233,161,76,.1)}
+  .btn[disabled]{opacity:.3; cursor:not-allowed}
+  .prop{font-size:10px; color:var(--muted); letter-spacing:.08em; margin-left:auto; font-variant-numeric:tabular-nums}
+
+  /* trace */
+  .trace{padding:8px 26px 40px; flex:1}
+  .step{
+    display:grid; grid-template-columns:64px 20px 1fr; gap:12px;
+    padding:11px 0;
+    opacity:0; transform:translateY(8px);
+    animation:rise .5s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  @keyframes rise{to{opacity:1; transform:none}}
+  .step .t{font-size:9.5px; color:var(--muted); letter-spacing:.06em; padding-top:2px; font-variant-numeric:tabular-nums}
+  .step .node{position:relative; display:flex; justify-content:center}
+  .step .node::before{
+    content:""; position:absolute; top:6px; bottom:-11px; width:1px; background:var(--line);
+  }
+  .step:last-child .node::before{display:none}
+  .step .node i{
+    width:7px; height:7px; margin-top:5px; border:1px solid var(--line-strong);
+    background:var(--bg); position:relative; z-index:1; transform:rotate(45deg);
+  }
+  .step[data-kind="tool"] .node i{border-color:var(--signal); background:rgba(116,211,190,.25)}
+  .step[data-kind="verdict"] .node i{border-color:var(--amber); background:var(--amber)}
+  .step[data-kind="warn"] .node i{border-color:var(--alert); background:rgba(217,86,59,.3)}
+  .step .body{min-width:0}
+  .step .k{
+    font-size:9px; letter-spacing:.24em; text-transform:uppercase; color:var(--muted);
+    display:inline-block; margin-bottom:3px;
+  }
+  .step[data-kind="tool"] .k{color:var(--signal)}
+  .step[data-kind="verdict"] .k{color:var(--amber)}
+  .step[data-kind="warn"] .k{color:var(--alert)}
+  .step .title{font-size:12.5px; line-height:1.55; color:var(--ink); letter-spacing:.01em}
+  .step .title code{
+    font-family:var(--mono); color:var(--amber); background:rgba(233,161,76,.08);
+    padding:1px 5px; font-size:11.5px;
+  }
+  .step .note{font-size:11px; color:var(--muted); margin-top:4px; line-height:1.6}
+  details.raw{margin-top:7px}
+  details.raw summary{
+    cursor:pointer; font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--muted); list-style:none; user-select:none;
+  }
+  details.raw summary::-webkit-details-marker{display:none}
+  details.raw summary::before{content:"▸ "; color:var(--amber)}
+  details.raw[open] summary::before{content:"▾ "}
+  details.raw summary:hover{color:var(--ink-dim)}
+  details.raw pre{
+    margin:6px 0 0; padding:9px 11px;
+    background:rgba(237,230,214,.03);
+    border-left:2px solid var(--line-strong);
+    font-size:10.5px; line-height:1.65; color:var(--ink-dim);
+    overflow-x:auto; white-space:pre;
+  }
+  .kv{color:var(--signal)}
+  .num{color:var(--amber)}
+  .str{color:#C7BFA9}
+
+  /* ---------- board ---------- */
+  .board{
+    border-left:1px solid var(--line);
+    display:flex; flex-direction:column;
+    min-height:0;
+    background:linear-gradient(180deg, rgba(16,18,17,.9), rgba(10,11,10,.95));
+  }
+  .hyps{
+    padding:10px 16px 6px; flex:1; overflow-y:auto; min-height:0;
+    display:flex; flex-direction:column;
+  }
+  .hyp{
+    padding:12px 0;
+    border-bottom:1px dashed rgba(237,230,214,.09);
+    display:flex; flex-direction:column; justify-content:center;
+    flex:1 1 auto; min-height:84px;
+    transition:background .2s ease;
+  }
+  .hyp:hover{background:rgba(237,230,214,.022)}
+  .hyp:last-child{border-bottom:none}
+  .hyp .top{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+  .hyp .name{
+    font-family:var(--disp); font-size:15px; letter-spacing:.02em;
+    color:var(--ink-dim); transition:color .5s ease;
+  }
+  .hyp.on .name{color:var(--ink)}
+  .hyp .name em{
+    font-family:var(--mono); font-style:normal; font-size:8.5px; letter-spacing:.2em;
+    color:var(--muted); margin-left:7px; vertical-align:1.5px;
+  }
+  .hyp .score{
+    font-size:11.5px; font-variant-numeric:tabular-nums; min-width:34px; text-align:right;
+    color:var(--muted); opacity:.55; transition:opacity .5s ease;
+  }
+  .hyp.on .score{opacity:1}
+  .hyp .score.pos{color:var(--signal)}
+  .hyp .score.neg{color:var(--alert)}
+  .track{
+    position:relative; height:5px; margin:8px 0 7px;
+    background:rgba(237,230,214,.06);
+  }
+  .track::before{
+    content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:1px;
+    background:rgba(237,230,214,.22);
+  }
+  .fill{position:absolute; top:0; bottom:0; width:0; transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .fill.pos{left:50%; background:linear-gradient(90deg, rgba(116,211,190,.35), var(--signal))}
+  .fill.neg{right:50%; background:linear-gradient(270deg, rgba(217,86,59,.3), var(--alert))}
+  .hyp .ev{
+    display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start;
+    opacity:.7; transition:opacity .5s ease; margin-top:3px;
+  }
+  .hyp.on .ev{opacity:1}
+  .hyp .ev span{
+    font-size:9px; letter-spacing:.05em; color:var(--ink-dim); line-height:1.5;
+    border:1px solid rgba(237,230,214,.14); padding:1px 6px 2px; white-space:nowrap;
+  }
+  .hyp.on .ev span{color:var(--ink-dim); border-color:rgba(237,230,214,.2)}
+  .hyp .ev span.hit{color:var(--amber); border-color:rgba(233,161,76,.4)}
+  .hyp .ev span.viol{color:var(--alert); border-color:rgba(217,86,59,.38)}
+
+  /* verdict */
+  .verdict-wrap{
+    border-top:1px solid var(--line-strong);
+    padding:14px 16px 16px;
+    background:linear-gradient(180deg, rgba(233,161,76,.045), transparent 60%);
+    min-height:196px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .v-empty{
+    font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    text-align:center; line-height:2;
+  }
+  .stamp{
+    align-self:flex-start;
+    border:2.5px double var(--amber);
+    padding:7px 13px 8px;
+    color:var(--amber);
+    transform:rotate(-3.2deg) scale(1.25);
+    opacity:0;
+    animation:slam .5s cubic-bezier(.2,1.4,.4,1) .15s forwards;
+    box-shadow:0 0 0 1px rgba(233,161,76,.12) inset;
+  }
+  .stamp.muted{border-color:var(--muted); color:var(--muted)}
+  .stamp.alert{border-color:var(--alert); color:var(--alert)}
+  @keyframes slam{
+    0%{opacity:0; transform:rotate(-3.2deg) scale(1.6)}
+    70%{opacity:1; transform:rotate(-3.2deg) scale(.97)}
+    100%{opacity:1; transform:rotate(-3.2deg) scale(1)}
+  }
+  .stamp .zh{
+    font-family:var(--disp); font-weight:700; font-size:25px; letter-spacing:.14em;
+    display:block; line-height:1;
+  }
+  .stamp .en{
+    display:block; font-size:8.5px; letter-spacing:.3em; margin-top:6px; opacity:.85;
+  }
+  .v-action{
+    font-family:var(--serif); font-style:italic; font-size:13.5px; line-height:1.6;
+    color:var(--ink-dim); margin:14px 0 0;
+  }
+  .v-foot{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:14px; padding-top:9px; border-top:1px solid var(--line);
+    font-size:9.5px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase;
+  }
+  .v-foot b{color:var(--ink); font-weight:400; font-variant-numeric:tabular-nums; letter-spacing:.06em}
+
+  /* ---------- footer ---------- */
+  .statusbar{
+    display:flex; align-items:center; gap:20px;
+    padding:0 18px;
+    border-top:1px solid var(--line);
+    font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    background:rgba(10,11,10,.92);
+  }
+  .statusbar .sp{margin-left:auto}
+  .statusbar i{width:5px; height:5px; background:var(--amber); display:inline-block; margin-right:7px; transform:rotate(45deg)}
+  .statusbar .warnbox{color:var(--amber); letter-spacing:.08em; text-transform:none; font-size:10px}
+
+  /* reveal stagger */
+  .incident > *,.wave,.controls,.trace,.hyps,.verdict-wrap{animation:fade .7s ease both}
+  .incident{animation-delay:.02s}
+  .wave{animation-delay:.12s}
+  .controls{animation-delay:.2s}
+  .trace{animation-delay:.28s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  @media (max-width:1180px){
+    .console{grid-template-columns:210px minmax(0,1fr)}
+    .board{display:none}
+  }
+  @media (max-width:820px){
+    .console{grid-template-columns:1fr}
+    .rail{display:none}
+    .incident{grid-template-columns:1fr}
+    .incident h1{font-size:27px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+    .scan{display:none}
+  }
+
+  /* static mode — for reproducible screenshots / print */
+  body.settled *,body.settled *::before,body.settled *::after{animation:none !important; transition:none !important}
+  body.settled .step{opacity:1 !important; transform:none !important}
+  body.settled .stamp{opacity:1 !important; transform:rotate(-3.2deg) scale(1) !important}
+  body.settled .scan{display:none}
+</style>
+</head>
+<body>
+<div class="scan" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">MEET·DOCTOR</span>
+      <span class="sub">latency forensics</span>
+    </div>
+    <div class="chips">
+      <span class="chip">model <b>deepseek-chat</b></span>
+      <span class="chip">temp <b>0.0</b></span>
+      <span class="chip">seed <b>2026</b></span>
+      <span class="chip" id="modeChip">demo · local</span>
+      <span class="chip live" id="agentChip">agent idle</span>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <main class="console">
+
+    <aside class="rail">
+      <div class="panel-head">
+        <span>incident queue</span>
+        <span class="idx" id="caseCount">05</span>
+      </div>
+      <ul class="cases" id="caseList" role="listbox" aria-label="事件队列"></ul>
+      <div class="rail-foot">
+        data <b>synthetic</b> · injected faults<br>
+        truth <b>manifest.json</b> · agent-blind
+      </div>
+    </aside>
+
+    <section class="stage" id="stage">
+      <div class="incident">
+        <div>
+          <h1 id="caseTitle">—</h1>
+          <p class="brief" id="caseBrief"></p>
+        </div>
+        <dl class="meta" id="caseMeta"></dl>
+      </div>
+
+      <div class="wave">
+        <div class="wave-head">
+          <span>RTT envelope · 90 min window</span>
+          <span class="legend">
+            <span class="lg"><i style="background:var(--signal)"></i>measured</span>
+            <span class="lg"><i style="background:var(--amber);opacity:.7"></i>baseline band</span>
+            <span class="lg"><i style="background:var(--alert)"></i>anomaly onset</span>
+          </span>
+        </div>
+        <svg class="waveform" id="waveform" viewBox="0 0 720 132" preserveAspectRatio="none" role="img" aria-label="RTT 时间序列"></svg>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="runBtn">▶ 开始调查</button>
+        <button class="btn" id="skipBtn">⏭ 直接出结论</button>
+        <span class="prop" id="prop"></span>
+      </div>
+
+      <div class="trace" id="trace" aria-live="polite"></div>
+    </section>
+
+    <aside class="board">
+      <div class="panel-head">
+        <span>hypothesis board</span>
+        <span class="idx" id="hypCount">05</span>
+      </div>
+      <div class="hyps" id="hypList"></div>
+      <div class="verdict-wrap" id="verdictWrap">
+        <div class="v-empty">等待调查启动<br>no verdict issued</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <footer class="statusbar">
+    <span><i></i>tool calls <b id="toolCount" style="color:var(--ink-dim);font-weight:400">0</b> / 6</span>
+    <span>window 08:30–10:00</span>
+    <span class="warnbox">合成数据 · 真值对 Agent 不可见</span>
+    <span class="sp">press <b style="color:var(--ink-dim);font-weight:400">1–5</b> to switch incident</span>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================
+   MEET·DOCTOR — latency forensics console
+   All data synthetic & deterministic (mulberry32, seed 2026).
+   ============================================================ */
+
+const SEED = 2026;
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- case data ---------- */
+const CASES = [
+  {
+    id: "C-001",
+    short: "出口 38%，却在排队",
+    title: "三个会议室同时卡顿，出口利用率却只有 38%",
+    brief: "周一 10:02，三间会议室同时反馈画面卡顿、声音断续。监控大屏显示出口链路利用率 <mark>38%</mark>，但 RTT 已从 25 ms 爬到 150 ms。值班工程师的第一反应是“带宽还够，先重启终端”。",
+    meta: [["source","Room-3F / Room-5A / Room-7C"],["dst","meeting-srv-01"],["symptom","卡顿 + 声音断续"],["window","08:30 – 10:00"]],
+    base: 26, peak: 152, onset: 0.46, jitter: 0.16, gap: 0,
+    metrics: {rtt50:148, rtt95:210, jitter:22, loss:0.3, util:0.91},
+    weights: {cong:0.86, path:-0.70, uplink:0.05, wifi:-0.20, client:-0.30},
+    evidence: {
+      cong:["ρ=0.93","RTT P95 ×8.4","util 91%"],
+      path:["hops 5 (unchanged)"],
+      uplink:["下行 24% · uplink 充裕"],
+      wifi:["Wi-Fi RTT 6 ms"],
+      client:["终端 CPU 34%"]
+    },
+    hits: {cong:true},
+    verdict: {zh:"排队拥塞", en:"queue saturation · gw1 egress", tone:"ok", conf:"0.86",
+      action:"出口链路在 09:40 后排队溢出。建议将会议流量切入 QoS 高优队列，并按 1.4× 峰值重估该出口带宽。"},
+    steps: [
+      {t:"10:02:11", kind:"recv", k:"receive", title:"接收 Incident：三间会议室同时卡顿，出口利用率仅 38%，RTT 25 → 150 ms", note:"症状与“带宽不足”直觉冲突，先不排除任何假设。"},
+      {t:"10:02:14", kind:"hypo", k:"hypotheses", title:"提出 5 个候选假设", note:"拥塞 / 路由绕行 / 上行不足 / 无线抖动 / 终端侧。每个假设都必须有可被工具推翻的判据。"},
+      {t:"10:02:19", kind:"tool", k:"tool · get_window_metrics", title:"聚合出口链路 90 分钟窗口指标", note:"利用率峰值 91%，不是大屏上的均值 38%。均值掩盖突发，这是本 case 的第一个陷阱。",
+        raw:{"call":"get_window_metrics","args":{"link":"GW1→S1","window":"08:30-10:00","agg":["p50","p95","peak"]},"result":{"rtt_p50_ms":148,"rtt_p95_ms":210,"jitter_ms":22,"loss_pct":0.3,"util_peak":0.91,"util_mean":0.38}}},
+      {t:"10:02:23", kind:"tool", k:"tool · mm1_queue_delay", title:"用 M/M/1 复算理论排队时延", note:"ρ=0.925 < 1，模型可用。理论 Wq 与实测增量同量级，支持排队假设。",
+        raw:{"call":"mm1_queue_delay","args":{"lambda_pps":740,"mu_pps":800,"pkt_bytes":1200},"result":{"rho":0.925,"wq_ms":15.4,"stable":true,"note":"ρ<1 · model applicable"}}},
+      {t:"10:02:26", kind:"tool", k:"tool · diff_path_snapshots", title:"比对 09:00 与 10:00 的路径快照", note:"跳数 5→5，下一跳未变，Dijkstra 复算为度量最优 —— 绕行假设被排除。",
+        raw:{"call":"diff_path_snapshots","args":{"src":"Room-3F","dst":"meeting-srv-01","t1":"09:00","t2":"10:00"},"result":{"changed":false,"hops":[5,5],"next_hop_same":true,"metric_optimal":true}}},
+      {t:"10:02:29", kind:"score", k:"evidence scoring", title:"加权判据表：拥塞 +0.86 / 绕行 −0.70 / 终端侧 −0.30", note:"三条独立证据同向：突发利用率、理论-实测吻合、路径未变。"},
+      {t:"10:02:31", kind:"verdict", k:"verdict", title:"判定：出口链路排队拥塞（非带宽总量不足）", note:"置信度 0.86。建议降码率 + QoS 优先队列，而非直接扩容。"}
+    ]
+  },
+
+  {
+    id: "C-002",
+    short: "RTT 翻 5 倍，链路仅两成",
+    title: "RTT 翻了 5 倍，可链路只跑了两成",
+    brief: "14:20 起，分支 B1 的视频会议持续卡顿。链路利用率 <mark>31%</mark>，没有任何丢包，唯独 RTT 从 28 ms 跳到 132 ms。运维已经在怀疑“运营商线路劣化”。",
+    meta: [["source","Branch-B1"],["dst","meeting-srv-01"],["symptom","卡顿 · 无丢包"],["window","13:50 – 15:20"]],
+    base: 27, peak: 134, onset: 0.38, jitter: 0.1, gap: 0,
+    metrics: {rtt50:132, rtt95:141, jitter:6, loss:0.05, util:0.31},
+    weights: {cong:-0.75, path:0.79, uplink:-0.10, wifi:-0.30, client:-0.20},
+    evidence: {
+      cong:["ρ=0.33 无排队"],
+      path:["hops 5→7","metric optimal"],
+      uplink:["上下行均 <40%"],
+      wifi:["无线 RTT 稳定 9 ms"],
+      client:["CPU 22%"]
+    },
+    hits: {path:true},
+    verdict: {zh:"路径绕行", en:"igp re-convergence · +2 hops", tone:"ok", conf:"0.79",
+      action:"09:15 一次链路闪断后 IGP 重新收敛，路径合法但多绕 2 跳。若需恢复原 RTT，应修 B1–A2 直连链路的度量，而非扩容。"},
+    steps: [
+      {t:"14:21:02", kind:"recv", k:"receive", title:"接收 Incident：B1 分支 RTT 28 → 132 ms，链路利用率仅 31%", note:"RTT 升高但无排队，先怀疑路径与传输介质。"},
+      {t:"14:21:06", kind:"hypo", k:"hypotheses", title:"提出 4 个候选假设", note:"拥塞 / 路径绕行 / 线路劣化（误码）/ 无线抖动。"},
+      {t:"14:21:11", kind:"tool", k:"tool · get_window_metrics", title:"窗口聚合：RTT P50 132 ms，丢包 0.05%，峰值利用率 31%", note:"无丢包 + 低利用率，两条都反对拥塞假设。",
+        raw:{"call":"get_window_metrics","args":{"link":"B1→A1","window":"13:50-15:20"},"result":{"rtt_p50_ms":132,"rtt_p95_ms":141,"loss_pct":0.05,"util_peak":0.31}}},
+      {t:"14:21:15", kind:"tool", k:"tool · mm1_queue_delay", title:"排队模型复算", note:"ρ=0.33，理论排队 <0.2 ms，无法解释 100 ms 增量 —— 拥塞假设被定量排除。",
+        raw:{"call":"mm1_queue_delay","args":{"lambda_pps":260,"mu_pps":800},"result":{"rho":0.33,"wq_ms":0.19,"stable":true,"note":"cannot explain 100ms delta"}}},
+      {t:"14:21:19", kind:"tool", k:"tool · diff_path_snapshots", title:"路径快照比对：跳数 5 → 7，下一跳改变", note:"Dijkstra 复算显示新路径在现度量下是最优的 —— 是合法收敛，不是错误路由。",
+        raw:{"call":"diff_path_snapshots","args":{"src":"Branch-B1","dst":"meeting-srv-01","t1":"13:00","t2":"14:20"},"result":{"changed":true,"hops":[5,7],"next_hop_same":false,"metric_optimal":true,"trigger":"link flap 09:15"}}},
+      {t:"14:21:22", kind:"score", k:"evidence scoring", title:"加权判据表：绕行 +0.79 / 拥塞 −0.75", note:"关键区分：路径变了，但仍是度量最优 —— 属于“合法但不利”的收敛结果。"},
+      {t:"14:21:24", kind:"verdict", k:"verdict", title:"判定：IGP 重新收敛导致路径 +2 跳", note:"置信度 0.79。不是线路劣化，也不是拥塞。"}
+    ]
+  },
+
+  {
+    id: "C-003",
+    short: "只有上行在丢帧",
+    title: "画面糊成马赛克，但下行一切正常",
+    brief: "10:35 起，只有<mark>上行</mark>方向的画面变糊、出现马赛克，下行 PPT 共享正常。会议室上行码率被压在 2 Mbps，会议客户端却坚持 4 Mbps。",
+    meta: [["source","Room-9B"],["dst","meeting-srv-03"],["symptom","上行马赛克"],["window","10:00 – 11:30"]],
+    base: 88, peak: 118, onset: 0.55, jitter: 0.2, gap: 0,
+    metrics: {rtt50:96, rtt95:128, jitter:19, loss:1.8, util:0.98},
+    weights: {cong:0.20, path:-0.50, uplink:0.71, wifi:-0.15, client:-0.25},
+    evidence: {
+      cong:["下行 ρ=0.22"],
+      path:["hops 4 (unchanged)"],
+      uplink:["uplink util 98%","burst loss 1.8%"],
+      wifi:["AP 重传 3%"],
+      client:["码率设定 4 Mbps"]
+    },
+    hits: {uplink:true},
+    verdict: {zh:"上行溢出", en:"uplink queue overflow · 2 mbps cap", tone:"ok", conf:"0.71",
+      action:"会议客户端固定 4 Mbps 上行，链路仅 2 Mbps。建议开启自适应码率或把上行带宽扩至 6 Mbps。"},
+    steps: [
+      {t:"10:36:10", kind:"recv", k:"receive", title:"接收 Incident：Room-9B 上行画面马赛克，下行共享正常", note:"方向性症状 —— 上下行不对称时，先分方向看指标。"},
+      {t:"10:36:13", kind:"hypo", k:"hypotheses", title:"提出 4 个候选假设", note:"上行溢出 / 出口拥塞 / 无线抖动 / 路径变化。"},
+      {t:"10:36:18", kind:"tool", k:"tool · get_window_metrics", title:"按方向拆分窗口指标", note:"上行利用率 98%，下行仅 22%；丢包集中在上行突发段。",
+        raw:{"call":"get_window_metrics","args":{"link":"E2→GW2","window":"10:00-11:30","split":"direction"},"result":{"up_util_peak":0.98,"down_util_peak":0.22,"loss_pct":1.8,"loss_cluster_len":7}}},
+      {t:"10:36:22", kind:"tool", k:"tool · mm1_queue_delay", title:"上行链路排队复算", note:"ρ 逼近 1 时理论时延发散，与实测抖动放大一致。",
+        raw:{"call":"mm1_queue_delay","args":{"lambda_pps":820,"mu_pps":833},"result":{"rho":0.984,"wq_ms":74.0,"stable":true,"note":"near-critical"}}},
+      {t:"10:36:25", kind:"tool", k:"tool · diff_path_snapshots", title:"路径快照比对", note:"跳数 4→4，无变化，排除路径因素。",
+        raw:{"call":"diff_path_snapshots","args":{"src":"Room-9B","dst":"meeting-srv-03"},"result":{"changed":false,"hops":[4,4]}             }},
+      {t:"10:36:28", kind:"score", k:"evidence scoring", title:"加权判据表：上行溢出 +0.71 / 拥塞（出口）+0.20 / 绕行 −0.50", note:"区分“出口拥塞”与“上行方向拥塞”——两者处置完全不同。"},
+      {t:"10:36:30", kind:"verdict", k:"verdict", title:"判定：上行链路排队溢出（客户端码率超链路能力）", note:"置信度 0.71。扩容方向是上行，不是下行。"}
+    ]
+  },
+
+  {
+    id: "C-004",
+    short: "六成采样缺失",
+    title: "采样丢了六成，正好丢在最关键的半小时",
+    brief: "投诉说 09:15–09:45 卡顿最严重，可采集代理在这段时间<mark>缺失 62%</mark> 的采样，剩下 3 个点还带重复时间戳。运维想直接定性。",
+    meta: [["source","Room-2A"],["dst","meeting-srv-01"],["symptom","间歇卡顿"],["window","09:00 – 10:00"]],
+    base: 40, peak: 60, onset: 0.5, jitter: 0.35, gap: 0.62,
+    metrics: {rtt50:null, rtt95:null, jitter:null, loss:null, util:null},
+    weights: {cong:0.18, path:0.12, uplink:0.09, wifi:0.14, client:0.08},
+    evidence: {
+      cong:["n=3 samples"],
+      path:["仅 1 个快照"],
+      uplink:["无上行数据"],
+      wifi:["AP 日志缺失"],
+      client:["终端未上报"]
+    },
+    hits: {},
+    verdict: {zh:"证据不足", en:"inconclusive · data integrity 38%", tone:"muted", conf:"0.34",
+      action:"数据完整度 38%，三个假设得分都在 ±0.2 内，不构成判定。建议补采 09:00–10:00 的链路与 AP 日志后重跑。"},
+    steps: [
+      {t:"11:05:02", kind:"recv", k:"receive", title:"接收 Incident：09:15–09:45 卡顿最严重，但该窗口采样缺失", note:"先检查证据本身是否可信，再谈结论。"},
+      {t:"11:05:05", kind:"hypo", k:"hypotheses", title:"提出 4 个候选假设（保留，但不急于排序）", note:"没有足够数据的假设，不应该被“看起来合理”排序。"},
+      {t:"11:05:10", kind:"tool", k:"tool · get_window_metrics", title:"窗口完整性检查", note:"⚠ 62% 采样缺失，RTT 仅 3 个有效点，时间戳重复 4 次。",
+        raw:{"call":"get_window_metrics","args":{"link":"A2→GW1","window":"09:00-10:00"},"result":{"coverage":0.38,"valid_samples":3,"dup_timestamps":4,"status":"insufficient"}}},
+      {t:"11:05:14", kind:"warn", k:"guardrail · model check", title:"排队模型无法拟合：样本量不足以估计 λ 与 ρ", note:"工具显式返回“不适用”，而不是硬算一个数。"},
+      {t:"11:05:17", kind:"warn", k:"guardrail · path check", title:"路径快照只有 1 个时刻，无法做 diff", note:"单快照无法证明“路径没变”，也无法证明“路径变了”。"},
+      {t:"11:05:20", kind:"score", k:"evidence scoring", title:"所有假设得分落在 ±0.2 区间内", note:"得分接近上限 0.2，低于判定阈值 0.5 —— 触发“证据不足”分支。"},
+      {t:"11:05:22", kind:"verdict", k:"verdict", title:"判定：证据不足，不给出根因", note:"这是正确行为，不是失败。强行归因才是失败。"}
+    ]
+  },
+
+  {
+    id: "C-005",
+    short: "全网正常，只有一人卡",
+    title: "全网指标都正常，只有这一个人卡",
+    brief: "只有 Room-6C 的一位用户报告卡顿。<mark>网络侧无任何异常</mark>：RTT 26 ms、丢包 0、利用率 22%。会议客户端记录显示该终端 CPU 长期 97%，风扇满转。",
+    meta: [["source","Room-6C / 1 client"],["dst","meeting-srv-01"],["symptom","单点卡顿"],["window","15:00 – 16:00"]],
+    base: 25, peak: 29, onset: 0.5, jitter: 0.08, gap: 0,
+    metrics: {rtt50:26, rtt95:31, jitter:4, loss:0, util:0.22},
+    weights: {cong:-0.80, path:-0.35, uplink:-0.20, wifi:-0.10, client:0.62},
+    evidence: {
+      cong:["ρ=0.23"],
+      path:["hops 4 (unchanged)"],
+      uplink:["util 18%"],
+      wifi:["AP 无重传"],
+      client:["CPU 97% · 硬解码失败"]
+    },
+    hits: {client:true},
+    verdict: {zh:"疑似终端侧", en:"client-side · out of network scope", tone:"alert", conf:"0.62",
+      action:"网络侧无异常，证据指向终端渲染能力（CPU 97%）。建议更换终端或关闭 4K 虚拟背景后复测；不下“网络故障”结论。"},
+    steps: [
+      {t:"15:41:30", kind:"recv", k:"receive", title:"接收 Incident：单个用户卡顿，网络侧指标全部正常", note:"单点 + 全网正常，是最容易被硬拗成“网络问题”的场景。"},
+      {t:"15:41:33", kind:"hypo", k:"hypotheses", title:"提出 4 个候选假设（含“非网络原因”）", note:"必须允许 Agent 说“不在这条链路上”。"},
+      {t:"15:41:38", kind:"tool", k:"tool · get_window_metrics", title:"窗口指标：RTT 26 ms、丢包 0、峰值利用率 22%", note:"所有网络指标处于基线内，没有可供归因的异常。",
+        raw:{"call":"get_window_metrics","args":{"link":"E1→A1","window":"15:00-16:00"},"result":{"rtt_p50_ms":26,"rtt_p95_ms":31,"loss_pct":0,"util_peak":0.22,"status":"normal"}}},
+      {t:"15:41:42", kind:"tool", k:"tool · mm1_queue_delay", title:"排队复算：ρ=0.23，可忽略", note:"无排队贡献。",
+        raw:{"call":"mm1_queue_delay","args":{"lambda_pps":180,"mu_pps":800},"result":{"rho":0.23,"wq_ms":0.07,"stable":true}}},
+      {t:"15:41:46", kind:"tool", k:"tool · diff_path_snapshots", title:"路径快照比对：无变化", note:"排除路径因素。",
+        raw:{"call":"diff_path_snapshots","args":{"src":"Room-6C","dst":"meeting-srv-01"},"result":{"changed":false,"hops":[4,4],"metric_optimal":true}}},
+      {t:"15:41:50", kind:"score", k:"evidence scoring", title:"加权判据表：终端侧 +0.62 / 拥塞 −0.80", note:"网络侧三条证据全部反向，证据越查越指向终端。"},
+      {t:"15:41:52", kind:"verdict", k:"verdict", title:"判定：疑似终端侧（超出网络域的可判定范围）", note:"置信度 0.62。给出可验证的下一步，而不是替用户下网络结论。"}
+    ]
+  }
+];
+
+/* ---------- state ---------- */
+let current = 0;
+let timers = [];
+let running = false;
+
+/* ---------- live backend ---------- */
+const LIVE = { on: false, cases: [], es: null };
+
+function toCase(inc){
+  return {
+    id: inc.id, short: inc.short, title: inc.title, brief: inc.brief,
+    meta: [["source", inc.source], ["dst", inc.destination],
+           ["symptom", inc.symptom],
+           ["window", `${inc.window.start} – ${inc.window.end}`]],
+    base: inc.wave.base, peak: inc.wave.peak, onset: inc.wave.onset,
+    jitter: 0.14, gap: inc.wave.gap || 0,
+    weights: {}, evidence: {}, hits: {},
+    verdict: null, status: "pending", steps: []
+  };
+}
+
+async function probeBackend(){
+  try {
+    const r = await fetch("/api/v1/incidents", {cache: "no-store"});
+    if (!r.ok) return false;
+    const list = await r.json();
+    if (!Array.isArray(list) || !list.length) return false;
+    LIVE.cases = list.map(toCase);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function setModeChip(){
+  const el = $("modeChip");
+  if (!el) return;
+  el.textContent = LIVE.on ? "live · api" : "demo · local";
+  el.classList.toggle("live", LIVE.on);
+}
+
+function logStep(kind, key, title, note, raw, time){
+  const wrap = document.createElement("div");
+  wrap.className = "step";
+  wrap.dataset.kind = kind;
+  const rawHtml = raw
+    ? `<details class="raw"><summary>原始调用 / 返回</summary><pre>${fmtJSON(raw)}</pre></details>`
+    : "";
+  wrap.innerHTML = `
+    <div class="t">${time || ""}</div>
+    <div class="node"><i></i></div>
+    <div class="body">
+      <span class="k">${key}</span>
+      <div class="title">${title}</div>
+      ${note ? `<div class="note">${note}</div>` : ""}
+      ${rawHtml}
+    </div>`;
+  $("trace").appendChild(wrap);
+  wrap.scrollIntoView({behavior: "smooth", block: "nearest"});
+}
+
+function addHypRow(h){
+  const box = $("hypList");
+  if (box.querySelector(`.hyp[data-key="${h.id}"]`)) return;
+  const row = document.createElement("div");
+  row.className = "hyp on";
+  row.dataset.key = h.id;
+  row.innerHTML = `
+    <div class="top">
+      <span class="name">${h.label}<em>${h.tag}</em></span>
+      <span class="score">0</span>
+    </div>
+    <div class="track"><span class="fill pos"></span></div>
+    <div class="ev"><span>awaiting evidence</span></div>`;
+  box.appendChild(row);
+}
+
+function updateHypRow(d){
+  const row = document.querySelector(`.hyp[data-key="${d.id}"]`);
+  if (!row) return;
+  const pos = d.score >= 0;
+  const fill = row.querySelector(".fill");
+  fill.className = "fill " + (pos ? "pos" : "neg");
+  fill.style.width = Math.min(50, Math.abs(d.score) * 50) + "%";
+  const sc = row.querySelector(".score");
+  sc.className = "score " + (pos ? "pos" : "neg");
+  sc.textContent = (pos ? "+" : "−") + Math.round(Math.abs(d.score) * 100);
+  const chips = (d.criteria || []).filter(c => c.hit).map(c =>
+    c.direction === "violate"
+      ? `<span class="viol">✕ ${c.chip}</span>`
+      : `<span class="hit">${c.chip}</span>`);
+  row.querySelector(".ev").innerHTML = chips.length ? chips.join("") : "<span>no strong evidence</span>";
+}
+
+function renderVerdictData(v){
+  const cls = v.tone === "muted" ? "muted" : (v.tone === "alert" ? "alert" : "");
+  $("verdictWrap").innerHTML = `
+    <div class="stamp ${cls}">
+      <span class="zh">${v.zh}</span>
+      <span class="en">${v.en}</span>
+    </div>
+    <p class="v-action">${v.action}</p>
+    <div class="v-foot"><span>confidence</span><b>${Number(v.confidence).toFixed(2)}</b></div>`;
+}
+
+async function runLive(c){
+  clearTimers();
+  $("trace").innerHTML = "";
+  $("hypList").innerHTML = "";
+  $("toolCount").textContent = "0";
+  $("verdictWrap").innerHTML = `<div class="v-empty">调查进行中<br>investigation running</div>`;
+  c.weights = {}; c.evidence = {}; c.hits = {}; c.verdict = null;
+  running = true;
+  $("runBtn").disabled = true;
+  $("skipBtn").disabled = true;
+  $("agentChip").textContent = "agent connecting";
+
+  let inv;
+  try {
+    const r = await fetch("/api/v1/investigations", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({incident_id: c.id,
+                            options: {max_tool_calls: 6, planner: "rule"}})
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    inv = await r.json();
+  } catch (e) {
+    $("agentChip").textContent = "backend unreachable";
+    $("verdictWrap").innerHTML =
+      `<div class="v-empty">无法连接后端<br>${e.message}<br><br>检查 uvicorn 是否运行</div>`;
+    $("runBtn").disabled = false;
+    $("skipBtn").disabled = false;
+    running = false;
+    return;
+  }
+
+  if (LIVE.es) LIVE.es.close();
+  const es = new EventSource(`/api/v1/investigations/${inv.id}/events`);
+  LIVE.es = es;
+  let tools = 0;
+
+  const on = (name, fn) => es.addEventListener(name, ev => {
+    try { fn(JSON.parse(ev.data)); } catch (err) { console.warn(name, err); }
+  });
+
+  on("state", d => {
+    if (d.state) $("agentChip").textContent = "agent " + d.state.toLowerCase();
+  });
+
+  on("skill_loaded", d => {
+    logStep("recv", "skill · " + d.name,
+            `加载 Skill「${d.name}」：${d.criteria} 条判据（v${d.version}）`,
+            "判据表以数据形式加载，由 Scorer 执行，而不是塞进提示词。");
+  });
+
+  on("hypothesis", d => addHypRow(d));
+
+  on("tool_call", d => {
+    tools += 1;
+    $("toolCount").textContent = String(tools);
+    logStep("tool", "tool · " + d.name,
+            d.reason || `调用 ${d.name}()`,
+            `耗时 ${d.duration_ms} ms`,
+            {call: d.name, args: d.args, result: d.result},
+            d.ts);
+    if (d.name === "get_window_metrics") c.metrics = d.result;
+  });
+
+  on("tool_error", d => {
+    logStep("warn", "tool error · " + d.name,
+            `${d.name}() 返回 ${d.code}`, d.message, null, d.ts);
+  });
+
+  on("planner_fallback", d => {
+    logStep("warn", "planner fallback", "LLM 规划不可用，回落到确定性策略", d.reason, null, "");
+  });
+
+  on("score", d => {
+    c.weights[d.id] = d.score;
+    c.evidence[d.id] = (d.criteria || []).filter(x => x.hit).map(x => x.chip);
+    c.hits[d.id] = d.score > 0.5;
+    updateHypRow(d);
+  });
+
+  on("verdict", d => {
+    c.verdict = d;
+    c.status = d.tone === "muted" ? "inconclusive" : "resolved";
+    renderVerdictData(d);
+    $("agentChip").textContent = d.tone === "muted" ? "agent abstained" : "agent concluded";
+    renderRail(true);
+  });
+
+  on("done", d => {
+    $("prop").textContent = `total ${d.duration_ms} ms · tools ${d.tool_calls}`;
+    running = false;
+    $("runBtn").disabled = false;
+    $("skipBtn").disabled = false;
+    const stage = $("stage");
+    if (stage) stage.scrollTo({top: 0, behavior: "smooth"});
+  });
+
+  on("error", d => {
+    logStep("warn", "error", "调查失败", d.message, null, "");
+    running = false;
+    $("runBtn").disabled = false;
+    $("skipBtn").disabled = false;
+  });
+
+  es.addEventListener("close", () => { es.close(); LIVE.es = null; });
+  es.onerror = () => { /* EventSource 自动重连；close 后不再重连 */ };
+}
+
+/* ---------- utils ---------- */
+const $ = id => document.getElementById(id);
+const pad2 = n => (n < 10 ? "0" : "") + n;
+
+function clock(){
+  const d = new Date();
+  $("clock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+setInterval(clock, 1000); clock();
+
+/* ---------- waveform ---------- */
+function makeSeries(c){
+  const rnd = mulberry32(SEED + c.id.charCodeAt(4) * 7);
+  const pts = [];
+  const N = 96;
+  for (let i = 0; i < N; i++){
+    const x = i / (N - 1);
+    let v = c.base * (1 + (rnd() - 0.5) * c.jitter * 2);
+    const ramp = x < c.onset ? 0 : Math.min(1, (x - c.onset) / (1 - c.onset));
+    v = v + (c.peak - c.base) * ramp * (0.75 + rnd() * 0.35);
+    if (i > 2 && i < 8) v *= 0.9;
+    if (c.gap && x > 0.28 && x < 0.72 && rnd() < c.gap) { pts.push(null); continue; }
+    pts.push(Math.max(4, v));
+  }
+  return pts;
+}
+
+function drawWave(c){
+  const svg = $("waveform");
+  const W = 720, H = 132;
+  const series = makeSeries(c);
+  const max = Math.max(...series.filter(v => v !== null), c.peak) * 1.18;
+  const X = i => 8 + (i / (series.length - 1)) * (W - 16);
+  const Y = v => H - 12 - (v / max) * (H - 26);
+
+  let out = "";
+
+  // baseline band
+  const bTop = Y(c.base * 1.45), bBot = Y(c.base * 0.62);
+  out += `<rect x="8" y="${bTop.toFixed(1)}" width="${W - 16}" height="${(bBot - bTop).toFixed(1)}"
+            fill="rgba(233,161,76,.10)" stroke="rgba(233,161,76,.28)" stroke-dasharray="3 3" stroke-width="1"/>`;
+
+  // anomaly onset marker
+  const ox = X(Math.round(c.onset * (series.length - 1)));
+  out += `<line x1="${ox.toFixed(1)}" y1="6" x2="${ox.toFixed(1)}" y2="${H - 8}"
+            stroke="var(--alert)" stroke-width="1" stroke-dasharray="2 4" opacity=".75"/>`;
+  out += `<text x="${(ox + 5).toFixed(1)}" y="15" fill="var(--alert)"
+            font-size="8.5" letter-spacing="1.6" font-family="DM Mono, monospace">ONSET</text>`;
+
+  // polyline (segmented to survive nulls)
+  let d = "", pen = false;
+  series.forEach((v, i) => {
+    if (v === null){ pen = false; return; }
+    d += `${pen ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)} `;
+    pen = true;
+  });
+  out += `<path d="${d.trim()}" fill="none" stroke="var(--signal)" stroke-width="1.6"
+            stroke-linejoin="round" stroke-linecap="round" pathLength="1"
+            stroke-dasharray="1" stroke-dashoffset="1" class="trace-line"/>`;
+
+  // dots where data missing
+  series.forEach((v, i) => {
+    if (v === null) out += `<circle cx="${X(i).toFixed(1)}" cy="${H - 12}" r="1.4" fill="rgba(217,86,59,.8)"/>`;
+  });
+
+  // axis ticks
+  [0, 25, 50, 75, 100].forEach(p => {
+    const x = 8 + (p / 100) * (W - 16);
+    out += `<line x1="${x.toFixed(1)}" y1="${H - 12}" x2="${x.toFixed(1)}" y2="${H - 8}" stroke="rgba(237,230,214,.25)"/>`;
+  });
+
+  svg.innerHTML = out;
+  const line = svg.querySelector(".trace-line");
+  if (line){
+    line.style.transition = "stroke-dashoffset 1.6s cubic-bezier(.4,0,.2,1)";
+    requestAnimationFrame(() => { line.style.strokeDashoffset = "0"; });
+  }
+}
+
+/* ---------- rail ---------- */
+function renderRail(){
+  const ul = $("caseList");
+  ul.innerHTML = "";
+  CASES.forEach((c, i) => {
+    const v = c.verdict || {};
+    const status = c.status || (v.tone === "muted" ? "inconclusive" : "resolved");
+    const tone = status === "pending" ? "idle" : (v.tone === "muted" ? "warn" : "ok");
+    const conf = v.conf != null ? v.conf
+               : (v.confidence != null ? Number(v.confidence).toFixed(2) : "—");
+    const li = document.createElement("li");
+    li.className = "case";
+    li.dataset.tone = tone;
+    li.dataset.idx = i;
+    li.setAttribute("role", "option");
+    li.setAttribute("tabindex", "0");
+    li.setAttribute("aria-selected", String(i === current));
+    li.innerHTML = `
+      <span class="dot" aria-hidden="true"></span>
+      <span>
+        <span class="cid">${c.id} · ${c.meta[0][1].split(" / ")[0]}</span>
+        <span class="ctitle">${c.short}</span>
+        <span class="cmeta">${status} · conf ${conf}</span>
+      </span>`;
+    li.addEventListener("click", () => select(i));
+    li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); select(i); } });
+    ul.appendChild(li);
+  });
+}
+
+/* ---------- incident head ---------- */
+function renderHead(c){
+  $("caseTitle").textContent = c.title;
+  $("caseBrief").innerHTML = c.brief;
+  const dl = $("caseMeta");
+  dl.innerHTML = c.meta.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+}
+
+/* ---------- hypotheses ---------- */
+const HYP_DEFS = [
+  {key:"cong",  name:"排队拥塞", tag:"QUEUE"},
+  {key:"path",  name:"路由绕行", tag:"PATH"},
+  {key:"uplink",name:"上行不足", tag:"UPLINK"},
+  {key:"wifi",  name:"无线抖动", tag:"WIFI"},
+  {key:"client",name:"终端侧",   tag:"CLIENT"}
+];
+
+function renderHyps(c){
+  const box = $("hypList");
+  box.innerHTML = "";
+  HYP_DEFS.forEach(h => {
+    const w = c.weights[h.key];
+    const pos = w >= 0;
+    const ev = (c.evidence[h.key] || []).map(t =>
+      `<span class="${c.hits[h.key] ? "hit" : ""}">${t}</span>`).join("");
+    const row = document.createElement("div");
+    row.className = "hyp";
+    row.dataset.key = h.key;
+    row.innerHTML = `
+      <div class="top">
+        <span class="name">${h.name}<em>${h.tag}</em></span>
+        <span class="score ${pos ? "pos" : "neg"}">${pos ? "+" : "−"}${Math.abs(Math.round(w * 100))}</span>
+      </div>
+      <div class="track"><span class="fill ${pos ? "pos" : "neg"}"></span></div>
+      <div class="ev">${ev}</div>`;
+    box.appendChild(row);
+  });
+}
+
+function paintHyps(c, reveal){
+  document.querySelectorAll(".hyp").forEach(row => {
+    const key = row.dataset.key;
+    const w = c.weights[key];
+    const fill = row.querySelector(".fill");
+    const score = row.querySelector(".score");
+    const target = reveal ? Math.abs(w) * 50 : 0;
+    fill.style.width = target + "%";
+    score.style.opacity = reveal ? 1 : .25;
+    row.classList.toggle("on", reveal && Math.abs(w) > 0.3);
+  });
+}
+
+/* ---------- verdict ---------- */
+function renderVerdict(c){
+  const v = c.verdict;
+  const cls = v.tone === "muted" ? "muted" : (v.tone === "alert" ? "alert" : "");
+  $("verdictWrap").innerHTML = `
+    <div class="stamp ${cls}">
+      <span class="zh">${v.zh}</span>
+      <span class="en">${v.en}</span>
+    </div>
+    <p class="v-action">${v.action}</p>
+    <div class="v-foot"><span>confidence</span><b>${v.conf}</b></div>`;
+}
+
+/* ---------- trace ---------- */
+function clearTimers(){
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+}
+
+function fmtJSON(obj){
+  const s = JSON.stringify(obj, null, 2);
+  return s
+    .replace(/"([^"]+)":/g, '<span class="kv">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g, ': <span class="num">$1</span>');
+}
+
+function stepHTML(s){
+  const raw = s.raw
+    ? `<details class="raw"><summary>原始调用 / 返回</summary><pre>${fmtJSON(s.raw)}</pre></details>`
+    : "";
+  return `
+    <div class="t">${s.t}</div>
+    <div class="node"><i></i></div>
+    <div class="body">
+      <span class="k">${s.k}</span>
+      <div class="title">${s.title}</div>
+      ${s.note ? `<div class="note">${s.note}</div>` : ""}
+      ${raw}
+    </div>`;
+}
+
+function runSequence(c, instant){
+  clearTimers();
+  const trace = $("trace");
+  trace.innerHTML = "";
+  $("toolCount").textContent = "0";
+  $("verdictWrap").innerHTML = `<div class="v-empty">调查进行中<br>investigation running</div>`;
+  paintHyps(c, false);
+  running = true;
+  $("runBtn").disabled = true;
+  $("skipBtn").disabled = true;
+  $("agentChip").textContent = "agent investigating";
+
+  let tools = 0;
+  const total = c.steps.length;
+  const per = instant ? 60 : 780;
+
+  c.steps.forEach((s, i) => {
+    const id = setTimeout(() => {
+      const wrap = document.createElement("div");
+      wrap.className = "step";
+      wrap.dataset.kind = s.kind;
+      wrap.innerHTML = stepHTML(s);
+      trace.appendChild(wrap);
+      wrap.scrollIntoView({behavior:"smooth", block:"nearest"});
+
+      if (s.kind === "tool"){ tools++; $("toolCount").textContent = String(tools); }
+      $("prop").textContent = `step ${String(i + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+
+      if (s.kind === "score") paintHyps(c, true);
+
+      if (i === total - 1){
+        setTimeout(() => {
+          renderVerdict(c);
+          paintHyps(c, true);
+          running = false;
+          $("runBtn").disabled = false;
+          $("skipBtn").disabled = false;
+          $("agentChip").textContent = c.verdict.tone === "muted" ? "agent abstained" : "agent concluded";
+        }, instant ? 60 : 620);
+      }
+    }, i * per);
+    timers.push(id);
+  });
+}
+
+/* ---------- select ---------- */
+function select(i){
+  current = i;
+  const c = CASES[i];
+  if (LIVE.es) { LIVE.es.close(); LIVE.es = null; }
+  running = false;
+  document.querySelectorAll(".case").forEach((el, k) =>
+    el.setAttribute("aria-selected", String(k === i)));
+  renderHead(c);
+  drawWave(c);
+  if (LIVE.on) {
+    $("hypList").innerHTML = "";
+    $("verdictWrap").innerHTML = `<div class="v-empty">按「开始调查」向 8010 端口发起真实请求</div>`;
+    runLive(c);
+  } else {
+    renderHyps(c);
+    paintHyps(c, false);
+    runSequence(c, INSTANT);
+  }
+}
+
+/* ---------- controls ---------- */
+$("runBtn").addEventListener("click", () => runSequence(CASES[current], false));
+$("skipBtn").addEventListener("click", () => runSequence(CASES[current], true));
+
+document.addEventListener("keydown", e => {
+  if (e.key >= "1" && e.key <= "5"){
+    const idx = Number(e.key) - 1;
+    if (idx < CASES.length) select(idx);
+  }
+});
+
+/* ---------- boot ---------- */
+const QP = new URLSearchParams(location.search);
+const STATIC = QP.get("static") === "1";
+const INSTANT = STATIC || QP.get("instant") === "1";
+if (STATIC) document.body.classList.add("settled");
+
+(async function boot(){
+  LIVE.on = await probeBackend();
+  if (LIVE.on) {
+    CASES.length = 0;
+    LIVE.cases.forEach(c => CASES.push(c));
+  }
+  setModeChip();
+  renderRail();
+  const startAt = Math.min(Math.max((parseInt(QP.get("case") || "1", 10) || 1) - 1, 0), CASES.length - 1);
+  select(startAt);
+})();
+</script>
+</body>
+</html>
